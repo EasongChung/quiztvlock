@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.os.Build;
+import android.os.IBinder;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.widget.Toast;
@@ -160,6 +161,11 @@ public class LockService extends android.app.Service {
             startForeground(NOTIF_ID, n);
         } catch (Throwable ignore) {
         }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
     @Override
