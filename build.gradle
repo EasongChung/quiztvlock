@@ -1,6 +1,8 @@
-// 顶层构建文件。AGP 8.1.4，需 Gradle 8.0+、JDK 17。
+// AGP 7.4.2：支持 compileSdk 34，且不强制 targetSdk >= 31。
+// 我们保留 targetSdk 28：targetSdk >28 后，后台服务拉起全屏答题页会被
+// Android 10+ 的「后台 Activity 启动限制」拦截，老旧电视反而失效。
 plugins {
-    id 'com.android.application' version '8.1.4' apply false
+    id 'com.android.application' version '7.4.2' apply false
 }
 
 // 兼容旧版 Gradle 命令行（不使用 wrapper jar 也能跑）
