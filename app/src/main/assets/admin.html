@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>答题电视锁 · 家长管理</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #101820; color: #EAF2F8; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { background: #16222e; padding: 14px 18px; border-bottom: 2px solid #FFC107; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  header h1 { margin: 0; font-size: 20px; color: #FFC107; }
+  .card { background: #16222e; border-radius: 10px; padding: 16px; margin: 14px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; color: #8FD14F; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  button, .btn { background: #22303C; color: #fff; border: 1px solid #4A5A68; border-radius: 8px; padding: 8px 14px; font-size: 15px; }
+  button:hover { border-color: #FFC107; }
+  input, select { background: #0d141b; color: #fff; border: 1px solid #4A5A68; border-radius: 8px; padding: 8px 10px; font-size: 15px; margin: 3px 0; }
+  input[type=number] { width: 90px; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { border-bottom: 1px solid #22303C; padding: 7px 6px; text-align: left; }
+  th { color: #9FB3C8; }
+  .tag { background: #0B6E4F; border-radius: 4px; padding: 1px 7px; font-size: 12px; }
+  .tag.yw { background: #6A1B9A; } .tag.xx { background: #1565C0; } .tag.yy { background: #B71C1C; }
+  .ok { color: #8FD14F; } .err { color: #FF8A80; }
+  #login { max-width: 360px; margin: 60px auto; }
+  .small { font-size: 13px; color: #9FB3C8; }
+  .stat { font-size: 15px; line-height: 1.9; }
+</style>
+</head>
+<body>
+<header>
+  <h1>答题电视锁 · 家长管理</h1>
+  <span class="small" id="netTip"></span>
+</header>
+
+<!-- 登录 -->
+<div id="login" class="card">
+  <h2>登录</h2>
+  <div class="row"><input id="user" placeholder="账号" value="admin" style="flex:1"></div>
+  <div class="row"><input id="pass" type="password" placeholder="密码" value="" style="flex:1"></div>
+  <div class="row"><button onclick="doLogin()">登录</button><span class="small">默认 admin / 123456</span></div>
+  <div id="loginMsg" class="small"></div>
+</div>
+
+<div id="main" style="display:none">
+  <!-- 状态 -->
+  <div class="card">
+    <h2>当前状态</h2>
+    <div class="stat" id="status">加载中…</div>
+    <div class="row" style="margin-top:8px">
+      <button onclick="act('lock')">立即开始答题</button>
+      <button onclick="act('unlock')">家长 PIN 解锁</button>
+    </div>
+    <div class="row">
+      <input id="resetMin" type="number" placeholder="分钟" value="30">
+      <button onclick="act('reset')">重置观看时长</button>
+    </div>
+    <div id="actMsg" class="small"></div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="card">
+    <h2>规则设置</h2>
+    <div class="row">
+      <label>观看时长(分) <input id="watchMinutes" type="number" min="1"></label>
+      <label>答对每题奖励(分) <input id="minutesPerCorrect" type="number" min="1"></label>
+      <label>每轮题数 <input id="questionsPerRound" type="number" min="1"></label>
+      <label>答错追加(题) <input id="extraPerWrong" type="number" min="1"></label>
+    </div>
+    <div class="row">
+      <b class="small" style="width:100%">题库开关</b>
+      <label><input type="checkbox" id="bank_语文"> 语文</label>
+      <label><input type="checkbox" id="bank_数学"> 数学</label>
+      <label><input type="checkbox" id="bank_英语"> 英语</label>
+      <button onclick="saveSettings()">保存设置</button>
+    </div>
+    <div id="setMsg" class="small"></div>
+  </div>
+
+  <!-- 加题 -->
+  <div class="card">
+    <h2>添加题目（四选一）</h2>
+    <div class="row"><input id="stem" placeholder="题干，如：「暖」的拼音是？" style="flex:1;min-width:220px"></div>
+    <div class="grid4">
+      <input id="opt0" placeholder="选项 A">
+      <input id="opt1" placeholder="选项 B">
+      <input id="opt2" placeholder="选项 C">
+      <input id="opt3" placeholder="选项 D">
+    </div>
+    <div class="row">
+      <label>正确选项
+        <select id="correct">
+          <option value="0">A</option><option value="1">B</option>
+          <option value="2">C</option><option value="3">D</option>
+        </select>
+      </label>
+      <label>科目
+        <select id="subject">
+          <option>语文</option><option>数学</option><option>英语</option>
+        </select>
+      </label>
+      <button onclick="addQuestion()">添加</button>
+    </div>
+    <div id="addMsg" class="small"></div>
+  </div>
+
+  <!-- 题库 -->
+  <div class="card">
+    <h2>题库列表 <span class="small" id="qCount"></span></h2>
+    <table>
+      <thead><tr><th style="width:36px">序</th><th>题目</th><th style="width:64px">科目</th><th style="width:160px">答案</th><th style="width:64px"></th></tr></thead>
+      <tbody id="qList"></tbody>
+    </table>
+  </div>
+
+  <!-- 账号 -->
+  <div class="card">
+    <h2>修改 WebUI 账号密码</h2>
+    <div class="row">
+      <input id="oldUser" placeholder="原账号" value="admin">
+      <input id="oldPass" type="password" placeholder="原密码">
+      <input id="newUser" placeholder="新账号">
+      <input id="newPass" type="password" placeholder="新密码（至少4位）">
+      <button onclick="saveAccount()">保存</button>
+    </div>
+    <div id="accMsg" class="small"></div>
+  </div>
+</div>
+
+<script>
+var TOKEN = localStorage.getItem('quiztv_token') || '';
+
+function post(action, params, cb) {
+  var body = new URLSearchParams(params || {});
+  if (TOKEN) body.append('token', TOKEN);
+  fetch('/api/' + action, { method: 'POST', body: body })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { cb(j); })
+    .catch(function () { cb({ ok: false, msg: '网络错误' }); });
+}
+
+function doLogin() {
+  post('login', { user: document.getElementById('user').value,
+                  pass: document.getElementById('pass').value }, function (j) {
+    var m = document.getElementById('loginMsg');
+    if (j.ok) {
+      TOKEN = j.token;
+      localStorage.setItem('quiztv_token', j.token);
+      showMain();
+    } else {
+      m.innerHTML = '<span class="err">' + (j.msg || '登录失败') + '</span>';
+    }
+  });
+}
+
+function showMain() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  loadStatus();
+  loadQuestions();
+}
+
+function loadStatus() {
+  var p = TOKEN ? { token: TOKEN } : {};
+  fetch('/api/status?' + new URLSearchParams(p))
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || j.ok === false) { logout(); return; }
+      var html = (j.quizActive ? '<b class="err">【答题中】' : '<b class="ok">【观看中】')
+        + '</b> 剩余观看 <b>' + j.remainingMin + '</b> 分钟'
+        + ' · 本轮待答 <b>' + j.pending + '</b> 题'
+        + ' · 已答对 <b>' + j.correct + '</b> 题'
+        + ' · 题库共 <b>' + j.totalQuestions + '</b> 题';
+      document.getElementById('status').innerHTML = html;
+      document.getElementById('netTip').textContent =
+        '电视地址 http://' + j.ip + ':' + j.port;
+      var s = j.settings || {};
+      document.getElementById('watchMinutes').value = s.watchMinutes || 30;
+      document.getElementById('minutesPerCorrect').value = s.minutesPerCorrect || 5;
+      document.getElementById('questionsPerRound').value = s.questionsPerRound || 5;
+      document.getElementById('extraPerWrong').value = s.extraPerWrong || 1;
+      setBox('bank_语文', s.bank_语文); setBox('bank_数学', s.bank_数学); setBox('bank_英语', s.bank_英语);
+    })
+    .catch(function () { });
+}
+function setBox(id, v) { document.getElementById(id).checked = !!v; }
+
+function loadQuestions() {
+  fetch('/api/questions?' + new URLSearchParams({ token: TOKEN }))
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var tb = document.getElementById('qList');
+      tb.innerHTML = '';
+      if (!j || !j.ok) return;
+      (j.questions || []).forEach(function (q, i) {
+        var tr = document.createElement('tr');
+        var cls = q.subject === '语文' ? 'yw' : q.subject === '数学' ? 'xx' : 'yy';
+        tr.innerHTML = '<td>' + (i + 1) + '</td><td>' + esc(q.stem) + '</td>'
+          + '<td><span class="tag ' + cls + '">' + esc(q.subject) + '</span></td>'
+          + '<td>' + esc(q.answer) + '</td>'
+          + '<td><button onclick="delQ(\'' + q.id + '\')">删除</button></td>';
+        tb.appendChild(tr);
+      });
+      document.getElementById('qCount').textContent = '共 ' + (j.questions || []).length + ' 题';
+    });
+}
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function delQ(id) {
+  if (!confirm('删除这道题？')) return;
+  post('question/delete', { id: id }, function (j) {
+    loadQuestions();
+  });
+}
+
+function act(kind) {
+  var msg = document.getElementById('actMsg');
+  if (kind === 'reset') {
+    var min = parseInt(document.getElementById('resetMin').value) || 30;
+    post('reset', { minutes: min }, function (j) { loadStatus(); msgShow(msg, j); });
+  } else if (kind === 'lock') {
+    post('lock', {}, function (j) { loadStatus(); msgShow(msg, j); });
+  } else if (kind === 'unlock') {
+    var pin = prompt('输入电视上的家长 PIN 码：');
+    if (pin == null) return;
+    post('unlock', { pin: pin }, function (j) { loadStatus(); msgShow(msg, j); });
+  }
+}
+function msgShow(el, j) {
+  el.innerHTML = j.ok ? '<span class="ok">操作成功</span>'
+    : '<span class="err">' + esc(j.msg || '操作失败') + '</span>';
+}
+
+function saveSettings() {
+  var p = {
+    watchMinutes: val('watchMinutes'),
+    minutesPerCorrect: val('minutesPerCorrect'),
+    questionsPerRound: val('questionsPerRound'),
+    extraPerWrong: val('extraPerWrong')
+  };
+  p['bank_语文'] = box('bank_语文'); p['bank_数学'] = box('bank_数学'); p['bank_英语'] = box('bank_英语');
+  post('settings', p, function (j) { loadStatus(); msgShow(document.getElementById('setMsg'), j); });
+}
+function val(id) { return document.getElementById(id).value; }
+function box(id) { return document.getElementById(id).checked ? '1' : '0'; }
+
+function addQuestion() {
+  var p = {
+    stem: val('stem'), opt0: val('opt0'), opt1: val('opt1'),
+    opt2: val('opt2'), opt3: val('opt3'),
+    correct: val('correct'), subject: val('subject')
+  };
+  if (!p.stem || !p.opt0 || !p.opt1 || !p.opt2 || !p.opt3) {
+    document.getElementById('addMsg').innerHTML = '<span class="err">题干和 4 个选项都要填</span>';
+    return;
+  }
+  post('question', p, function (j) {
+    msgShow(document.getElementById('addMsg'), j);
+    if (j.ok) {
+      ['stem', 'opt0', 'opt1', 'opt2', 'opt3'].forEach(function (id) { document.getElementById(id).value = ''; });
+      loadQuestions(); loadStatus();
+    }
+  });
+}
+
+function saveAccount() {
+  post('account', {
+    oldUser: val('oldUser'), oldPass: val('oldPass'),
+    newUser: val('newUser'), newPass: val('newPass')
+  }, function (j) {
+    msgShow(document.getElementById('accMsg'), j);
+    if (j.ok) { document.getElementById('oldPass').value = ''; document.getElementById('newPass').value = ''; }
+  });
+}
+
+function logout() {
+  TOKEN = ''; localStorage.removeItem('quiztv_token');
+  document.getElementById('login').style.display = 'block';
+  document.getElementById('main').style.display = 'none';
+}
+
+// 启动：有 token 就直接进
+if (TOKEN) showMain();
+document.getElementById('login').style.display = TOKEN ? 'none' : 'block';
+document.getElementById('main').style.display = TOKEN ? 'block' : 'none';
+setInterval(function () { if (TOKEN) loadStatus(); }, 5000);
+</script>
+</body>
+</html>

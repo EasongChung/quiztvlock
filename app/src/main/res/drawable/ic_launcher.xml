@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 电视机身 -->
+    <path android:fillColor="#1565C0" android:pathData="M16,22 h76 a8,8 0 0 1 8,8 v40 a8,8 0 0 1 -8,8 h-76 a8,8 0 0 1 -8,-8 v-40 a8,8 0 0 1 8,-8 z" />
+    <!-- 屏幕 -->
+    <path android:fillColor="#B3E5FC" android:pathData="M22,30 h64 v32 h-64 z" />
+    <!-- 底座 -->
+    <path android:fillColor="#0D47A1" android:pathData="M34,80 h40 l-4,8 h-32 z" />
+    <!-- 屏幕上的对勾（答对） -->
+    <path android:fillColor="#0B6E4F" android:pathData="M42,44 l8,10 18,-20 6,6 -24,24 -14,-16 z" />
+</vector>

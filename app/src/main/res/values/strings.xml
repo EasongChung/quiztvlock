@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">答题电视锁</string>
+    <string name="quiz_title">要先答题才能看电视哦</string>
+    <string name="parent_unlock">家长解锁</string>
+    <string name="bank_empty">题库为空，请家长在手机 WebUI 里添加题目</string>
+</resources>

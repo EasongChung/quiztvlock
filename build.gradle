@@ -1,0 +1,9 @@
+// 顶层构建文件。AGP 8.1.4，需 Gradle 8.0+、JDK 17。
+plugins {
+    id 'com.android.application' version '8.1.4' apply false
+}
+
+// 兼容旧版 Gradle 命令行（不使用 wrapper jar 也能跑）
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}
