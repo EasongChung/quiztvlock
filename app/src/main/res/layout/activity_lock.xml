@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App 进入密码门禁页 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#101820"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="答题电视锁"
+        android:textColor="#FFC107"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="请输入家长进入密码"
+        android:textColor="#9FB3C8"
+        android:textSize="16sp"
+        android:layout_marginBottom="20dp" />
+
+    <EditText
+        android:id="@+id/appPwd"
+        android:layout_width="220dp"
+        android:layout_height="56dp"
+        android:inputType="numberPassword"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:background="@drawable/btn_option"
+        android:hint="进入密码"
+        android:textColorHint="#8899A8" />
+
+    <Button
+        android:id="@+id/appPwdOk"
+        android:layout_width="220dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="14dp"
+        android:text="进入"
+        android:textSize="18sp"
+        android:textColor="#0B6E4F"
+        android:background="@drawable/btn_option" />
+
+</LinearLayout>

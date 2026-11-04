@@ -10,3 +10,5 @@
 /app/build
 *.apk
 *.keystore
+*.p12
+/release/

@@ -25,9 +25,8 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            // 云端暂用 debug 签名，方便直接安装测试；
-            // 正式分发请替换为自己的 keystore（见 docs/BUILD.md）。
-            signingConfig signingConfigs.debug
+            // 输出未签名 APK，签名统一由 CI 用自有 keystore 完成（见 docs/BUILD.md）。
+            // 本机临时调试可用 `gradle installRelease` 配合 debug 签名另行处理。
         }
     }
 

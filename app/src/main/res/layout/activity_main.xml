@@ -74,6 +74,15 @@
             android:layout_marginBottom="8dp" />
 
         <Button
+            android:id="@+id/btnProtect"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:textSize="16sp"
+            android:background="@drawable/btn_option"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp" />
+
+        <Button
             android:id="@+id/btnStart"
             android:layout_width="match_parent"
             android:layout_height="56dp"

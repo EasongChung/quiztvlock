@@ -46,6 +46,23 @@ public class MainActivity extends Activity {
                 new Getter() { @Override public int get() { return prefs.getExtraPerWrong(); } },
                 new Setter() { @Override public void set(int v) { prefs.setExtraPerWrong(v); } });
 
+        findViewById(R.id.btnProtect).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (AdminReceiver.isDeviceOwner(MainActivity.this)) {
+                    AdminReceiver.setUninstallBlocked(MainActivity.this, true);
+                    Toast.makeText(MainActivity.this, "最强防卸载已开启（设备所有者）",
+                            Toast.LENGTH_LONG).show();
+                } else if (!AdminReceiver.isAdminActive(MainActivity.this)) {
+                    // 弹出系统授权页，激活后系统设置中无法直接卸载
+                    AdminReceiver.requestAdmin(MainActivity.this, 1000);
+                } else {
+                    showOwnerDialog();
+                }
+                updateProtectLabel();
+            }
+        });
+
         findViewById(R.id.btnStart).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -92,6 +109,30 @@ public class MainActivity extends Activity {
         else startService(i);
     }
 
+    private void updateProtectLabel() {
+        Button b = findViewById(R.id.btnProtect);
+        if (AdminReceiver.isDeviceOwner(this)) {
+            b.setText("防卸载保护：已开启（设备所有者·最强，重启也有效）");
+        } else if (AdminReceiver.isAdminActive(this)) {
+            b.setText("防卸载保护：已开启（点击查看升级为设备所有者方法）");
+        } else {
+            b.setText("防卸载保护：未开启（点击开启）");
+        }
+    }
+
+    private void showOwnerDialog() {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("升级为「设备所有者」获得最强保护")
+                .setMessage("1. 用电脑安装 adb 工具并与电视连接（adb connect 电视IP:5555）\n\n"
+                        + "2. 执行一次：\n"
+                        + "adb shell dpm set-device-owner com.quiztv.lock/.AdminReceiver\n\n"
+                        + "3. 若提示已有账号/设备管理员，需先在电视「设置 → 应用」里移除其他设备管理员\n\n"
+                        + "升级后：卸载按钮被彻底禁用，且不受国产 TV 系统自启动白名单限制，开机自启更可靠。\n"
+                        + "解除方法：WebUI 登录后输入 PIN 解锁，或 adb shell dpm remove-device-owner com.quiztv.lock/.AdminReceiver")
+                .setPositiveButton("知道了", null)
+                .show();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -111,6 +152,12 @@ public class MainActivity extends Activity {
     };
 
     private void refresh() {
+        // 设备所有者：自动锁定卸载
+        if (AdminReceiver.isDeviceOwner(this)) {
+            AdminReceiver.setUninstallBlocked(this, true);
+        }
+        updateProtectLabel();
+
         boolean active = prefs.isQuizActive();
         long rem = active
                 ? prefs.getPauseRemainingMs()

@@ -48,6 +48,7 @@ public class LockService extends android.app.Service {
         }
 
         startForegroundCompat();
+        HeartbeatAlarm.schedule(this);
 
         try {
             server = new HttpAdminServer(this, prefs, bank);
@@ -84,13 +85,60 @@ public class LockService extends android.app.Service {
                 sendMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE);
                 lastPauseSent = SystemClock.uptimeMillis();
             }
-        } else {
-            long rem = prefs.getDeadlineMs() - System.currentTimeMillis();
-            if (rem <= 0) {
-                // 观看时长用完：拉起答题，奖励时长从 0 计起
-                startRound(prefs.getQuestionsPerRound());
-            }
+            return;
         }
+
+        if (prefs.isResting()) {
+            // 休息页必须在前台
+            if (!RestActivity.foreground) {
+                Intent i = new Intent(this, RestActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            }
+            if (SystemClock.uptimeMillis() - lastPauseSent > 4000L) {
+                sendMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE);
+                lastPauseSent = SystemClock.uptimeMillis();
+            }
+            // 休息时间到：恢复观看状态
+            if (System.currentTimeMillis() >= prefs.getRestDeadlineMs()) {
+                prefs.setResting(false);
+                prefs.setSessionWatchedMs(0L);
+                long rem = prefs.getPauseRemainingMs();
+                prefs.setDeadlineMs(System.currentTimeMillis() + (rem > 0 ? rem : 0L));
+                prefs.setPauseRemainingMs(-1L);
+                sendMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY);
+            }
+            return;
+        }
+
+        // 正常观看：累计连续观看时长
+        prefs.setSessionWatchedMs(prefs.getSessionWatchedMs() + 1000L);
+
+        // 连续观看达到设定时长 → 强制黑屏休息
+        if (prefs.getRestAfterMinutes() > 0
+                && prefs.getSessionWatchedMs() >= prefs.getRestAfterMinutes() * 60000L) {
+            startRest();
+            return;
+        }
+
+        // 观看倒计时用完 → 进入答题
+        long rem = prefs.getDeadlineMs() - System.currentTimeMillis();
+        if (rem <= 0) {
+            startRound(prefs.getQuestionsPerRound());
+        }
+    }
+
+    /** 开始强制休息：冻结剩余观看时长，拉起黑屏页 */
+    private void startRest() {
+        long rem = prefs.getDeadlineMs() - System.currentTimeMillis();
+        prefs.setPauseRemainingMs(rem > 0 ? rem : 0L);
+        prefs.setResting(true);
+        prefs.setRestDeadlineMs(System.currentTimeMillis()
+                + prefs.getRestMinutes() * 60000L);
+        Intent i = new Intent(this, RestActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        sendMediaKey(KeyEvent.KEYCODE_MEDIA_PAUSE);
     }
 
     /** 开始一轮答题：冻结当前剩余观看时长 */

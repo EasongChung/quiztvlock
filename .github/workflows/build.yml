@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      STORE_PASS: ${{ secrets.QUIZTV_STORE_PASS }}
+      KEYSTORE_B64: ${{ secrets.QUIZTV_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,8 +31,28 @@ jobs:
         with:
           gradle-version: '7.6.2'
 
-      - name: Build release APK
+      - name: Build release APK (unsigned)
         run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Sign with private keystore
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "缺少 Secrets，跳过签名（仅未签名产物）"; exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/quiztv.p12
+          BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0
+          $BUILD_TOOLS/zipalign -f -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/app-release-aligned.apk
+          $BUILD_TOOLS/apksigner sign \
+            --ks /tmp/quiztv.p12 --ks-type pkcs12 --ks-pass pass:$STORE_PASS \
+            --key-pass pass:$STORE_PASS \
+            --out app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/apk/release/app-release-aligned.apk
+          $BUILD_TOOLS/apksigner verify --print-certs \
+            app/build/outputs/apk/release/app-release.apk || true
+          rm -f app/build/outputs/apk/release/app-release-unsigned.apk \
+                app/build/outputs/apk/release/app-release-aligned.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

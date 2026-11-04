@@ -20,6 +20,10 @@ public class PrefManager {
     public String getPin() { return sp.getString("pin", "1234"); }
     public void setPin(String v) { sp.edit().putString("pin", v).apply(); }
 
+    /** 打开 App 的进入密码（独立于 WebUI 账号和家长 PIN） */
+    public String getAppPwd() { return sp.getString("appPwd", "1234"); }
+    public void setAppPwd(String v) { sp.edit().putString("appPwd", v).apply(); }
+
     /** 观看多长时间后进入答题（分钟） */
     public int getWatchMinutes() { return sp.getInt("watchMinutes", 30); }
     public void setWatchMinutes(int v) { sp.edit().putInt("watchMinutes", v).apply(); }
@@ -35,6 +39,27 @@ public class PrefManager {
     /** 答错 1 题追加的题数 */
     public int getExtraPerWrong() { return sp.getInt("extraPerWrong", 1); }
     public void setExtraPerWrong(int v) { sp.edit().putInt("extraPerWrong", v).apply(); }
+
+    // ---------- 黑屏休息 ----------
+    /** 连续观看多少分钟后强制黑屏休息 */
+    public int getRestAfterMinutes() { return sp.getInt("restAfterMinutes", 60); }
+    public void setRestAfterMinutes(int v) { sp.edit().putInt("restAfterMinutes", v).apply(); }
+
+    /** 每次黑屏休息时长（分钟） */
+    public int getRestMinutes() { return sp.getInt("restMinutes", 10); }
+    public void setRestMinutes(int v) { sp.edit().putInt("restMinutes", v).apply(); }
+
+    /** 是否处于强制休息中 */
+    public boolean isResting() { return sp.getBoolean("resting", false); }
+    public void setResting(boolean v) { sp.edit().putBoolean("resting", v).apply(); }
+
+    /** 休息结束时刻（epoch 毫秒） */
+    public long getRestDeadlineMs() { return sp.getLong("restDeadline", 0L); }
+    public void setRestDeadlineMs(long v) { sp.edit().putLong("restDeadline", v).apply(); }
+
+    /** 本轮连续观看累计毫秒（休息/答题时暂停累计） */
+    public long getSessionWatchedMs() { return sp.getLong("sessionWatched", 0L); }
+    public void setSessionWatchedMs(long v) { sp.edit().putLong("sessionWatched", v).apply(); }
 
     // ---------- 题库开关（WebUI 可切换） ----------
     public boolean isBankEnabled(String subject) {

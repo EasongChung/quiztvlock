@@ -1,54 +1,45 @@
-# 编译说明
+# 编译与签名
 
 ## 方式一：GitHub 云端编译（推荐，无需本机环境）
 
-1. 在 GitHub 新建仓库（例如 `quiztvlock`）；
-2. 把本目录全部文件推送到 `main` 分支；
-3. GitHub Actions（`.github/workflows/build.yml`）自动触发：
-   - JDK 17 + Android SDK 34 + Gradle 8.2；
-   - 执行 `gradle assembleRelease`；
-4. 进入仓库的 **Actions** 页面 → 点最近一次成功的 `Build APK` 运行 →
-   页面底部 **Artifacts** 区域下载 `quiztvlock-apk`（含 APK）。
+1. 将本仓库推送到 GitHub 的 `main` 分支；
+2. Actions（`.github/workflows/build.yml`）自动：
+   - JDK 17 + Android SDK 34 + Gradle 7.6.2；
+   - `gradle assembleRelease` 产出未签名 APK；
+   - 用仓库 Secrets 中的自有 keystore 做 **zipalign + apksigner 签名**；
+3. 在 **Actions** 页面点最近一次成功的 `Build APK` → 页面底部 **Artifacts** 下载 `quiztvlock-apk`。
+
+签名证书信息（请妥善保管，私钥文件在 `release/quiztv.p12`，已 gitignore）：
+
+| 项 | 值 |
+| --- | --- |
+| 证书文件 | `release/quiztv.p12`（本地保存，勿上传） |
+| 类型 | PKCS12，RSA-2048，有效期 50 年 |
+| 密钥库口令 | `QuizTV@2026!Key` |
+| GitHub Secrets | `QUIZTV_KEYSTORE_BASE64`（证书 base64）、`QUIZTV_STORE_PASS`（口令）、`EASONG_QTV_SIGN_USER` |
+
+**同一 keystore 签出的 APK 指纹一致，可直接覆盖升级安装。**
+
+> 想换成自己的证书：本地 `New-SelfSignedCertificate` 或 `keytool` 生成 p12，
+> `base64` 后更新 `QUIZTV_KEYSTORE_BASE64`、修改 `QUIZTV_STORE_PASS` 即可。
 
 ## 方式二：本机编译
 
-要求：JDK 17、Gradle 8.0+、Android SDK platform 34 + build-tools 34。
+要求：JDK 17、Gradle 7.6+、Android SDK platform 34 + build-tools 34。
 
 ```bash
 sdkmanager "platforms;android-34" "build-tools;34.0.0"
 cd quiztvlock
 gradle assembleRelease
-# 产物：app/build/outputs/apk/release/app-release.apk
+# 产物：app/build/outputs/apk/release/app-release-unsigned.apk
+# 用 release 目录下的 quiztv.p12 签名：
+zipalign -f -p 4 app-release-unsigned.apk aligned.apk
+apksigner sign --ks release/quiztv.p12 --ks-type pkcs12 \
+  --ks-pass pass:QuizTV@2026!Key --key-pass pass:QuizTV@2026!Key \
+  --out app-release.apk aligned.apk
 ```
 
-## 签名
+## 安全提示
 
-当前 Cloud Build 使用 **debug 签名**，便于自测。
-正式长期使用建议换成自己的签名（密钥请妥善保管，不要提交到仓库）：
-
-```bash
-keytool -genkey -v -keystore quiztv.keystore -alias quiztv -keyalg RSA -validity 10000
-```
-
-然后在 `app/build.gradle` 中替换：
-
-```groovy
-android {
-    signingConfigs {
-        release {
-            storeFile file('quiztv.keystore')
-            storePassword '***'
-            keyAlias 'quiztv'
-            keyPassword '***'
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
-    }
-}
-```
-
-**安全提示**：密钥与密码属高危数据，建议改为读取 `local.properties` 或环境变量，
-**不要**写死在提交到仓库的文件里。
+- 私钥文件 `quiztv.p12` 与口令属高危数据，**不要提交到仓库、不要发到公开群**；
+- 本仓库靠 `.gitignore`（`*.p12`、`/release/`）防止误提交，请勿修改。

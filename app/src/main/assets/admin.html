@@ -69,6 +69,10 @@
       <label>答错追加(题) <input id="extraPerWrong" type="number" min="1"></label>
     </div>
     <div class="row">
+      <label>连续观看多久休息(分, 0=不启用) <input id="restAfterMinutes" type="number" min="0"></label>
+      <label>黑屏休息时长(分) <input id="restMinutes" type="number" min="1"></label>
+    </div>
+    <div class="row">
       <b class="small" style="width:100%">题库开关</b>
       <label><input type="checkbox" id="bank_语文"> 语文</label>
       <label><input type="checkbox" id="bank_数学"> 数学</label>
@@ -76,6 +80,32 @@
       <button onclick="saveSettings()">保存设置</button>
     </div>
     <div id="setMsg" class="small"></div>
+  </div>
+
+  <!-- 密码管理 -->
+  <div class="card">
+    <h2>密码管理</h2>
+    <div class="row">
+      <label>电视上进入App的密码 <input id="appPwd" type="text" inputmode="numeric" placeholder="4-8位数字"></label>
+      <label>家长PIN（电视解锁用） <input id="pin" type="text" inputmode="numeric" placeholder="4-8位数字"></label>
+      <button onclick="savePins()">保存密码</button>
+    </div>
+    <div id="pinMsg" class="small"></div>
+  </div>
+
+  <!-- 防卸载 -->
+  <div class="card">
+    <h2>防卸载保护</h2>
+    <div class="small" id="protStatus">加载中…</div>
+    <div class="row" style="margin-top:8px">
+      <input id="protPin" placeholder="电视家长PIN" inputmode="numeric" style="width:120px">
+      <button onclick="protSet(false)">解除防卸载(允许卸载)</button>
+      <button onclick="protSet(true)">恢复防卸载</button>
+      <button onclick="adminRemove()">撤销设备管理员</button>
+    </div>
+    <div class="small">最强保护需在电脑执行一次：<br>
+      <code>adb shell dpm set-device-owner com.quiztv.lock/.AdminReceiver</code></div>
+    <div id="protMsg" class="small"></div>
   </div>
 
   <!-- 加题 -->
@@ -108,10 +138,30 @@
   <!-- 题库 -->
   <div class="card">
     <h2>题库列表 <span class="small" id="qCount"></span></h2>
+    <div class="row" style="margin-bottom:8px">
+      <button onclick="loadExport(true)">导出题库(txt)</button>
+    </div>
     <table>
       <thead><tr><th style="width:36px">序</th><th>题目</th><th style="width:64px">科目</th><th style="width:160px">答案</th><th style="width:64px"></th></tr></thead>
       <tbody id="qList"></tbody>
     </table>
+  </div>
+
+  <!-- 批量导入 -->
+  <div class="card">
+    <h2>批量导入题库（txt）</h2>
+    <div class="small">每行一题，格式：<code>题干|选项A|选项B|选项C|选项D|正确字母|科目</code><br>
+    例：<code>「暖」的拼音是？|nuǎn|luǎn|nüǎn|nuan|A|语文</code><br>
+    可让 AI 按此格式生成后整段粘贴；科目可省略（默认下方选择）。</div>
+    <div class="row"><label>默认科目
+      <select id="importSubject"><option>语文</option><option>数学</option><option>英语</option></select>
+    </label></div>
+    <textarea id="importData" rows="8" style="width:100%;background:#0d141b;color:#fff;border:1px solid #4A5A68;border-radius:8px;padding:8px;font-size:14px"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button onclick="importQ()">导入</button>
+      <button onclick="loadExport(false)">查看当前题库(txt)</button>
+    </div>
+    <div id="importMsg" class="small"></div>
   </div>
 
   <!-- 账号 -->
@@ -159,6 +209,7 @@ function showMain() {
   document.getElementById('main').style.display = 'block';
   loadStatus();
   loadQuestions();
+  loadProtection();
 }
 
 function loadStatus() {
@@ -167,10 +218,13 @@ function loadStatus() {
     .then(function (r) { return r.json(); })
     .then(function (j) {
       if (!j || j.ok === false) { logout(); return; }
-      var html = (j.quizActive ? '<b class="err">【答题中】' : '<b class="ok">【观看中】')
+      var html = j.resting
+        ? '<b class="err">【强制休息中】</b> 剩余休息 <b>' + Math.ceil(j.restingLeftSec / 60) + '</b> 分钟（黑屏保护眼睛）'
+        : (j.quizActive ? '<b class="err">【答题中】' : '<b class="ok">【观看中】')
         + '</b> 剩余观看 <b>' + j.remainingMin + '</b> 分钟'
         + ' · 本轮待答 <b>' + j.pending + '</b> 题'
         + ' · 已答对 <b>' + j.correct + '</b> 题'
+        + (j.restAfterMinutes > 0 ? ' · 已连续观看 <b>' + j.watchedMin + '</b>/' + j.restAfterMinutes + ' 分钟' : '')
         + ' · 题库共 <b>' + j.totalQuestions + '</b> 题';
       document.getElementById('status').innerHTML = html;
       document.getElementById('netTip').textContent =
@@ -180,6 +234,8 @@ function loadStatus() {
       document.getElementById('minutesPerCorrect').value = s.minutesPerCorrect || 5;
       document.getElementById('questionsPerRound').value = s.questionsPerRound || 5;
       document.getElementById('extraPerWrong').value = s.extraPerWrong || 1;
+      document.getElementById('restAfterMinutes').value = s.restAfterMinutes == null ? 60 : s.restAfterMinutes;
+      document.getElementById('restMinutes').value = s.restMinutes || 10;
       setBox('bank_语文', s.bank_语文); setBox('bank_数学', s.bank_数学); setBox('bank_英语', s.bank_英语);
     })
     .catch(function () { });
@@ -236,13 +292,73 @@ function saveSettings() {
     watchMinutes: val('watchMinutes'),
     minutesPerCorrect: val('minutesPerCorrect'),
     questionsPerRound: val('questionsPerRound'),
-    extraPerWrong: val('extraPerWrong')
+    extraPerWrong: val('extraPerWrong'),
+    restAfterMinutes: val('restAfterMinutes'),
+    restMinutes: val('restMinutes')
   };
   p['bank_语文'] = box('bank_语文'); p['bank_数学'] = box('bank_数学'); p['bank_英语'] = box('bank_英语');
   post('settings', p, function (j) { loadStatus(); msgShow(document.getElementById('setMsg'), j); });
 }
 function val(id) { return document.getElementById(id).value; }
 function box(id) { return document.getElementById(id).checked ? '1' : '0'; }
+
+function savePins() {
+  post('pins', { appPwd: val('appPwd'), pin: val('pin') }, function (j) {
+    msgShow(document.getElementById('pinMsg'), j);
+  });
+}
+
+function loadProtection() {
+  fetch('/api/protection?' + new URLSearchParams({ token: TOKEN }))
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.ok) return;
+      var t = j.owner ? '<b class="ok">设备所有者 · 最强保护</b>（卸载按钮已彻底禁用）'
+        : j.admin ? '<b class="ok">设备管理员 · 已开启</b>（设置中无法直接卸载）'
+        : '<b class="err">未开启</b>（在电视端 App 设置页点「防卸载保护」开启）';
+      if (j.uninstallBlocked) t += ' · 卸载已锁定';
+      document.getElementById('protStatus').innerHTML = t;
+    });
+}
+function protSet(block) {
+  post('protection/set', { blocked: block ? '1' : '0', pin: val('protPin') }, function (j) {
+    loadProtection(); msgShow(document.getElementById('protMsg'), j);
+  });
+}
+function adminRemove() {
+  if (!confirm('确认撤销设备管理员？之后 App 可在电视设置中卸载')) return;
+  post('admin/remove', { pin: val('protPin') }, function (j) {
+    loadProtection(); msgShow(document.getElementById('protMsg'), j);
+  });
+}
+
+function importQ() {
+  var data = document.getElementById('importData').value;
+  if (!data.trim()) { document.getElementById('importMsg').innerHTML = '<span class="err">请粘贴题目</span>'; return; }
+  post('question/import', { data: data, subject: val('importSubject') }, function (j) {
+    var m = document.getElementById('importMsg');
+    if (j.ok) {
+      m.innerHTML = '<span class="ok">导入完成：成功 ' + (j.added || 0) + ' 题，失败 ' + (j.failed || 0) + ' 题</span>'
+        + (j.errs ? '<br><span class="err">' + esc(j.errs) + '</span>' : '');
+      loadQuestions(); loadStatus();
+    } else { msgShow(m, j); }
+  });
+}
+function loadExport(download) {
+  fetch('/api/questions/export?' + new URLSearchParams({ token: TOKEN }))
+    .then(function (r) { return r.text(); })
+    .then(function (txt) {
+      if (download) {
+        var blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'quiztvlock-题库.txt';
+        a.click();
+      } else {
+        document.getElementById('importData').value = txt;
+      }
+    });
+}
 
 function addQuestion() {
   var p = {

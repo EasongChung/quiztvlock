@@ -30,8 +30,14 @@ import java.util.Random;
  *  POST /api/lock              立即开始一轮答题（需 token）
  *  POST /api/unlock            家长 PIN 解锁（需 token）
  *  POST /api/reset             重置观看时长（需 token）
- *  POST /api/settings          修改设置：观看时长/题数/题库开关（需 token）
+ *  POST /api/settings          修改设置：观看时长/题数/休息/题库开关（需 token）
  *  POST /api/account           修改 WebUI 账号密码（需 token）
+ *  POST /api/pins              修改进入密码 / 家长PIN（需 token）
+ *  GET  /api/protection        防卸载状态（需 token）
+ *  POST /api/protection/set    解除/恢复卸载拦截（需 token + 电视PIN）
+ *  POST /api/admin/remove      撤销设备管理员（需 token + 电视PIN）
+ *  POST /api/question/import   批量导入 txt 题库（需 token）
+ *  GET  /api/questions/export  导出题库为 txt（需 token）
  * </pre>
  */
 public class HttpAdminServer {
@@ -234,6 +240,81 @@ public class HttpAdminServer {
                 o.put("ok", true);
                 o.put("questions", arr);
                 writeJson(os, o);
+            } else if ("/api/questions/export".equals(path)) {
+                // 导出 txt：题干|选项A|选项B|选项C|选项D|正确字母(A-D)|科目
+                StringBuilder sb = new StringBuilder();
+                sb.append("# 格式：题干|选项A|选项B|选项C|选项D|正确字母(A-D)|科目\n");
+                for (Question q : bank.all()) {
+                    char letter = (char) ('A' + q.answer);
+                    StringBuilder line = new StringBuilder(q.stem);
+                    for (String o2 : q.options) line.append('|').append(o2);
+                    line.append('|').append(letter).append('|').append(q.subject);
+                    sb.append(line).append('\n');
+                }
+                write(os, "text/plain", sb.toString().getBytes("UTF-8"));
+            } else if ("/api/question/import".equals(path)) {
+                String data = p.get("data");
+                String subject = p.get("subject");
+                if (data == null || data.trim().isEmpty()) {
+                    writeFail(os, "导入数据为空");
+                    return;
+                }
+                int added = 0, failed = 0;
+                StringBuilder errs = new StringBuilder();
+                int lineNo = 0;
+                for (String raw : data.split("\n")) {
+                    lineNo++;
+                    String line = raw.trim();
+                    if (line.isEmpty() || line.startsWith("#")) continue;
+                    String[] f = line.split("\\|", -1);
+                    if (f.length < 6) { failed++; errs.append("第").append(lineNo).append("行格式错误；"); continue; }
+                    String[] opts = new String[]{f[1], f[2], f[3], f[4]};
+                    int ans = -1;
+                    String letter = f[5].trim().toUpperCase();
+                    if (letter.length() == 1 && letter.charAt(0) >= 'A' && letter.charAt(0) <= 'D') {
+                        ans = letter.charAt(0) - 'A';
+                    }
+                    String subj = f.length >= 7 && !f[6].trim().isEmpty() ? f[6].trim()
+                            : (subject == null ? "语文" : subject);
+                    if (bank.addQuestion(f[0], opts, ans, subj)) added++;
+                    else { failed++; errs.append("第").append(lineNo).append("行内容不合法；"); }
+                }
+                JSONObject o = new JSONObject();
+                o.put("ok", true);
+                o.put("added", added);
+                o.put("failed", failed);
+                if (errs.length() > 0) o.put("errs", errs.toString());
+                writeJson(os, o);
+            } else if ("/api/protection".equals(path)) {
+                JSONObject o = new JSONObject();
+                o.put("ok", true);
+                o.put("admin", AdminReceiver.isAdminActive(service));
+                o.put("owner", AdminReceiver.isDeviceOwner(service));
+                o.put("uninstallBlocked", AdminReceiver.isUninstallBlocked(service));
+                writeJson(os, o);
+            } else if ("/api/protection/set".equals(path)) {
+                if (!checkPin(p)) { writeFail(os, "PIN 码错误"); return; }
+                boolean block = "1".equals(p.get("blocked")) || "true".equals(p.get("blocked"));
+                if (AdminReceiver.setUninstallBlocked(service, block)) writeOk(os);
+                else writeFail(os, "需先升级为设备所有者：adb shell dpm set-device-owner com.quiztv.lock/.AdminReceiver");
+            } else if ("/api/admin/remove".equals(path)) {
+                if (!checkPin(p)) { writeFail(os, "PIN 码错误"); return; }
+                if (AdminReceiver.isDeviceOwner(service)) {
+                    writeFail(os, "设备所有者需用 ADB 移除：adb shell dpm remove-device-owner com.quiztv.lock/.AdminReceiver");
+                } else if (!AdminReceiver.isAdminActive(service)) {
+                    writeFail(os, "当前未激活设备管理员");
+                } else {
+                    AdminReceiver.dpm(service).removeActiveAdmin(AdminReceiver.componentName(service));
+                    writeOk(os);
+                }
+            } else if ("/api/pins".equals(path)) {
+                String pin = p.get("pin");
+                String appPwd = p.get("appPwd");
+                boolean changed = false;
+                if (pin != null && pin.matches("\\d{4,8}")) { prefs.setPin(pin); changed = true; }
+                if (appPwd != null && appPwd.matches("\\d{4,8}")) { prefs.setAppPwd(appPwd); changed = true; }
+                if (changed) writeOk(os);
+                else writeFail(os, "密码需为 4-8 位数字");
             } else if ("/api/question".equals(path)) {
                 String stem = p.get("stem");
                 String[] opts = new String[]{p.get("opt0"), p.get("opt1"), p.get("opt2"), p.get("opt3")};
@@ -281,6 +362,12 @@ public class HttpAdminServer {
                 applyInt(p, "extraPerWrong", new Setter() {
                     @Override public void set(int v) { prefs.setExtraPerWrong(v); }
                 });
+                applyInt(p, "restAfterMinutes", new Setter() {
+                    @Override public void set(int v) { prefs.setRestAfterMinutes(v); }
+                });
+                applyInt(p, "restMinutes", new Setter() {
+                    @Override public void set(int v) { prefs.setRestMinutes(v); }
+                });
                 for (String s : QuestionBank.subjects()) {
                     String v = p.get("bank_" + s);
                     if (v != null) prefs.setBankEnabled(s, "1".equals(v) || "true".equals(v));
@@ -309,6 +396,11 @@ public class HttpAdminServer {
 
     private interface Setter { void set(int v); }
 
+    private boolean checkPin(Map<String, String> p) {
+        String pin = p.get("pin");
+        return pin != null && pin.equals(prefs.getPin());
+    }
+
     private void applyInt(Map<String, String> p, String key, Setter setter) {
         String v = p.get(key);
         if (v == null) return;
@@ -323,10 +415,14 @@ public class HttpAdminServer {
         o.put("quizActive", prefs.isQuizActive());
         o.put("pending", prefs.getPending());
         o.put("correct", prefs.getCorrectInRound());
-        long rem = prefs.isQuizActive()
+        long rem = prefs.isQuizActive() || prefs.isResting()
                 ? prefs.getPauseRemainingMs()
                 : prefs.getDeadlineMs() - System.currentTimeMillis();
         o.put("remainingMin", Math.max(0L, rem / 60000L));
+        o.put("resting", prefs.isResting());
+        o.put("restingLeftSec", prefs.isResting()
+                ? Math.max(0L, (prefs.getRestDeadlineMs() - System.currentTimeMillis()) / 1000L) : 0L);
+        o.put("watchedMin", prefs.getSessionWatchedMs() / 60000L);
         o.put("totalQuestions", bank.size());
 
         JSONObject st = new JSONObject();
@@ -334,10 +430,17 @@ public class HttpAdminServer {
         st.put("minutesPerCorrect", prefs.getMinutesPerCorrect());
         st.put("questionsPerRound", prefs.getQuestionsPerRound());
         st.put("extraPerWrong", prefs.getExtraPerWrong());
+        st.put("restAfterMinutes", prefs.getRestAfterMinutes());
+        st.put("restMinutes", prefs.getRestMinutes());
         for (String s : QuestionBank.subjects()) st.put("bank_" + s, prefs.isBankEnabled(s));
         o.put("settings", st);
 
         o.put("webUser", prefs.getWebUser());
+        o.put("appPwdSet", true);
+        o.put("protection", new JSONObject()
+                .put("admin", AdminReceiver.isAdminActive(service))
+                .put("owner", AdminReceiver.isDeviceOwner(service))
+                .put("uninstallBlocked", AdminReceiver.isUninstallBlocked(service)));
         o.put("ip", Util.getIp(service));
         o.put("port", PORT);
         return o;

@@ -14,9 +14,9 @@
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
-        <!-- 家长设置页（桌面图标入口） -->
+        <!-- 桌面图标入口：先验证进入密码 -->
         <activity
-            android:name=".MainActivity"
+            android:name=".AppLockActivity"
             android:label="@string/app_name"
             android:exported="true">
             <intent-filter>
@@ -25,9 +25,22 @@
             </intent-filter>
         </activity>
 
+        <!-- 家长设置页 -->
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/settings_title"
+            android:exported="false" />
+
         <!-- 全屏答题页：开机/到点/未答完均由服务拉起 -->
         <activity
             android:name=".QuizActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
+
+        <!-- 强制黑屏休息页 -->
+        <activity
+            android:name=".RestActivity"
             android:exported="false"
             android:launchMode="singleTask"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
@@ -39,6 +52,26 @@
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- AlarmManager 心跳：服务被杀后自动拉起 -->
+        <receiver android:name=".HeartbeatReceiver" android:exported="false" />
+
+        <!-- 设备管理员：防卸载 -->
+        <receiver
+            android:name=".AdminReceiver"
+            android:label="@string/app_name"
+            android:description="@string/admin_desc"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
     </application>

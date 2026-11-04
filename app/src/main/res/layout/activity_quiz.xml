@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 全屏答题页：大字号、遥控器可聚焦，适合老旧电视 -->
+<!-- 全屏答题页：上方固定题干、中间选项可滚动、底部按钮永不裁剪 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#101820"
-    android:padding="32dp">
+    android:paddingTop="24dp"
+    android:paddingLeft="32dp"
+    android:paddingRight="32dp"
+    android:paddingBottom="12dp">
 
     <TextView
         android:id="@+id/title"
@@ -13,73 +16,93 @@
         android:layout_height="wrap_content"
         android:text="@string/quiz_title"
         android:textColor="#FFC107"
-        android:textSize="30sp"
-        android:layout_marginBottom="8dp" />
+        android:textSize="28sp"
+        android:layout_marginBottom="6dp" />
 
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="#9FB3C8"
-        android:textSize="18sp"
-        android:layout_marginBottom="24dp" />
+        android:textSize="17sp"
+        android:layout_marginBottom="14dp" />
 
     <TextView
         android:id="@+id/stem"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="#FFFFFF"
-        android:textSize="34sp"
+        android:textSize="30sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="14dp" />
 
-    <Button
-        android:id="@+id/opt0"
+    <!-- 选项区可滚动：小屏/大字体环境下也不会挤出屏幕 -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:textSize="22sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/btn_option"
-        android:layout_marginBottom="10dp"
-        android:focusable="true" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbars="none">
 
-    <Button
-        android:id="@+id/opt1"
-        android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:textSize="22sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/btn_option"
-        android:layout_marginBottom="10dp"
-        android:focusable="true" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <Button
-        android:id="@+id/opt2"
-        android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:textSize="22sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/btn_option"
-        android:layout_marginBottom="10dp"
-        android:focusable="true" />
+            <Button
+                android:id="@+id/opt0"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:textSize="22sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/btn_option"
+                android:layout_marginBottom="10dp"
+                android:focusable="true" />
 
-    <Button
-        android:id="@+id/opt3"
-        android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:textSize="22sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/btn_option"
-        android:layout_marginBottom="16dp"
-        android:focusable="true" />
+            <Button
+                android:id="@+id/opt1"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:textSize="22sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/btn_option"
+                android:layout_marginBottom="10dp"
+                android:focusable="true" />
+
+            <Button
+                android:id="@+id/opt2"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:textSize="22sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/btn_option"
+                android:layout_marginBottom="10dp"
+                android:focusable="true" />
+
+            <Button
+                android:id="@+id/opt3"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:textSize="22sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/btn_option"
+                android:focusable="true" />
+        </LinearLayout>
+    </ScrollView>
 
     <Button
         android:id="@+id/parentUnlock"
         android:layout_width="wrap_content"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:layout_gravity="end"
+        android:layout_marginTop="8dp"
         android:text="@string/parent_unlock"
         android:textSize="16sp"
+        android:textAllCaps="false"
         android:background="@drawable/btn_option" />
 
 </LinearLayout>
