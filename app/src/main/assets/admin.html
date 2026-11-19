@@ -63,7 +63,6 @@
   <div class="card">
     <h2>规则设置</h2>
     <div class="row">
-      <label>观看时长(分) <input id="watchMinutes" type="number" min="1"></label>
       <label>答对每题奖励(分) <input id="minutesPerCorrect" type="number" min="1"></label>
       <label>每轮题数 <input id="questionsPerRound" type="number" min="1"></label>
       <label>答错追加(题) <input id="extraPerWrong" type="number" min="1"></label>
@@ -71,6 +70,10 @@
     <div class="row">
       <label>连续观看多久休息(分, 0=不启用) <input id="restAfterMinutes" type="number" min="0"></label>
       <label>黑屏休息时长(分) <input id="restMinutes" type="number" min="1"></label>
+    </div>
+    <!-- 观看时长放最后：避免手机上输入时被后面输入框抢焦点/约束 -->
+    <div class="row">
+      <label>观看时长(分，到点进入答题) <input id="watchMinutes" type="number" min="1"></label>
     </div>
     <div class="row">
       <b class="small" style="width:100%">题库开关</b>
@@ -180,6 +183,7 @@
 
 <footer style="margin:0 14px 20px;padding:12px 16px;background:#16222e;border-radius:10px" class="small">
   <div>答题电视锁 <b>v1.0</b>（build 1） · 电视端 Android 5.0+ · WebUI 端口 36789</div>
+  <div style="margin-top:6px">作者：<a style="color:#8FD14F" href="https://github.com/EasongChung">EasongChung</a></div>
   <div style="margin-top:6px">仓库地址：<a style="color:#8FD14F" href="https://github.com/EasongChung/quiztvlock">github.com/EasongChung/quiztvlock</a></div>
   <div style="margin-top:6px">参考开源项目：
     <a style="color:#9FB3C8" href="https://github.com/gathin23/cleanyourtv">CleanYourTV (MIT)</a> ·

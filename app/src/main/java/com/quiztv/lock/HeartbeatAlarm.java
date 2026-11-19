@@ -15,6 +15,7 @@ import android.os.SystemClock;
 public class HeartbeatAlarm {
 
     private static final int REQ = 9001;
+    private static final int REQ_SOON = 9002;
 
     public static void schedule(Context ctx) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
@@ -24,6 +25,17 @@ public class HeartbeatAlarm {
                         : PendingIntent.FLAG_UPDATE_CURRENT);
         am.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 60_000L, 60_000L, pi);
+    }
+
+    /** 立即复活：任务被划掉/服务被杀后 2 秒内重新拉起 */
+    public static void scheduleSoon(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        Intent i = new Intent(ctx, HeartbeatReceiver.class);
+        PendingIntent pi = PendingIntent.getBroadcast(ctx, REQ_SOON, i,
+                Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                        : PendingIntent.FLAG_UPDATE_CURRENT);
+        am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 2_000L, pi);
     }
 
     /** 闹钟是否已注册（PendingIntent 存在即视为已注册） */

@@ -1,10 +1,14 @@
 package com.quiztv.lock;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -82,6 +86,7 @@ public class MainActivity extends Activity {
         });
 
         startGuard();
+        requestIgnoreBatteryOptimizations();
     }
 
     private interface Getter { int get(); }
@@ -108,6 +113,27 @@ public class MainActivity extends Activity {
         Intent i = new Intent(this, LockService.class);
         if (Build.VERSION.SDK_INT >= 26) startForegroundService(i);
         else startService(i);
+    }
+
+    /**
+     * 首次进入时请求电池优化白名单。
+     * 小米/Redmi 电视管家会在熄屏或后台时冻结应用，加入白名单后心跳与守护服务才稳定；
+     * 部分电视系统没有此设置页，弹不出来属正常，忽略即可。
+     */
+    private void requestIgnoreBatteryOptimizations() {
+        if (Build.VERSION.SDK_INT < 23 || prefs.isBatteryAsked()) return;
+        prefs.setBatteryAsked(true);
+        try {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                i.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(i);
+            }
+        } catch (ActivityNotFoundException ignore) {
+            // 电视系统无此页面
+        } catch (Throwable ignore) {
+        }
     }
 
     private void updateProtectLabel() {

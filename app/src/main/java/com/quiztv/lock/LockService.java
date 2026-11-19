@@ -218,7 +218,19 @@ public class LockService extends android.app.Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // 每次被拉起都重新注册心跳，防止国产系统清理闹钟
+        HeartbeatAlarm.schedule(this);
         return START_STICKY;
+    }
+
+    /** 最近任务里被划掉（小米/电视管家常见清理方式）→ 2 秒后自动复活 */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        try {
+            HeartbeatAlarm.scheduleSoon(this);
+        } catch (Throwable ignore) {
+        }
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override
@@ -226,6 +238,11 @@ public class LockService extends android.app.Service {
         handler.removeCallbacks(tick);
         if (server != null) server.stop();
         instance = null;
+        // 万一进程被杀前走到这里，也留一个复活出口
+        try {
+            HeartbeatAlarm.scheduleSoon(this);
+        } catch (Throwable ignore) {
+        }
         super.onDestroy();
     }
 }

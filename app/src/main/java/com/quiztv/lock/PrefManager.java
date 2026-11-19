@@ -53,6 +53,10 @@ public class PrefManager {
     public boolean isResting() { return sp.getBoolean("resting", false); }
     public void setResting(boolean v) { sp.edit().putBoolean("resting", v).apply(); }
 
+    /** 是否已向家长请求过电池优化白名单（只提示一次） */
+    public boolean isBatteryAsked() { return sp.getBoolean("batteryAsked", false); }
+    public void setBatteryAsked(boolean v) { sp.edit().putBoolean("batteryAsked", v).apply(); }
+
     /** 休息结束时刻（epoch 毫秒） */
     public long getRestDeadlineMs() { return sp.getLong("restDeadline", 0L); }
     public void setRestDeadlineMs(long v) { sp.edit().putLong("restDeadline", v).apply(); }
