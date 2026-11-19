@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
 }
 
+// CI 注入的版本号在脚本顶层读取（defaultConfig 闭包里 project 解析不可靠）
+def verCodeOverride = rootProject.findProperty('versionCodeOverride')
+def verNameOverride = rootProject.findProperty('versionNameOverride')
+def appVersionCode = verCodeOverride != null ? verCodeOverride.toString().toInteger() : 1
+def appVersionName = verNameOverride != null ? verNameOverride.toString() : '1.0'
+
 android {
     namespace 'com.quiztv.lock'
     compileSdk 34
@@ -14,8 +20,8 @@ android {
         // 「后台 Activity 启动限制」拦截，老旧电视反而失效。
         targetSdk 28
         // 本地直编默认 1.0；CI 通过 -PversionCodeOverride / -PversionNameOverride 自动递增
-        versionCode (project.findProperty('versionCodeOverride') ?: 1).toString().toInteger()
-        versionName (project.findProperty('versionNameOverride') ?: '1.0').toString()
+        versionCode appVersionCode
+        versionName appVersionName
     }
 
     compileOptions {
