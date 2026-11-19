@@ -20,6 +20,12 @@
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { border-bottom: 1px solid #22303C; padding: 7px 6px; text-align: left; }
   th { color: #9FB3C8; }
+  /* 题库固定 8 行高度，超出滚动；表头吸顶 */
+  .qscroll { max-height: 260px; overflow-y: auto; border: 1px solid #22303C; border-radius: 8px; }
+  .qscroll thead th { position: sticky; top: 0; background: #16222e; z-index: 1; }
+  .qscroll::-webkit-scrollbar { width: 8px; }
+  .qscroll::-webkit-scrollbar-thumb { background: #4A5A68; border-radius: 4px; }
+  .qscroll::-webkit-scrollbar-track { background: #0d141b; }
   .tag { background: #0B6E4F; border-radius: 4px; padding: 1px 7px; font-size: 12px; }
   .tag.yw { background: #6A1B9A; } .tag.xx { background: #1565C0; } .tag.yy { background: #B71C1C; }
   .ok { color: #8FD14F; } .err { color: #FF8A80; }
@@ -144,10 +150,12 @@
     <div class="row" style="margin-bottom:8px">
       <button onclick="loadExport(true)">导出题库(txt)</button>
     </div>
+    <div class="qscroll">
     <table>
       <thead><tr><th style="width:36px">序</th><th>题目</th><th style="width:64px">科目</th><th style="width:160px">答案</th><th style="width:64px"></th></tr></thead>
       <tbody id="qList"></tbody>
     </table>
+    </div>
   </div>
 
   <!-- 批量导入 -->
@@ -182,7 +190,7 @@
 </div>
 
 <footer style="margin:0 14px 20px;padding:12px 16px;background:#16222e;border-radius:10px" class="small">
-  <div>答题电视锁 <b>v1.0</b>（build 1） · 电视端 Android 5.0+ · WebUI 端口 36789</div>
+  <div>答题电视锁 <b id="verLabel">v1.0</b>（build <span id="buildLabel">1</span>） · 电视端 Android 5.0+ · WebUI 端口 36789</div>
   <div style="margin-top:6px">作者：<a style="color:#8FD14F" href="https://github.com/EasongChung">EasongChung</a></div>
   <div style="margin-top:6px">仓库地址：<a style="color:#8FD14F" href="https://github.com/EasongChung/quiztvlock">github.com/EasongChung/quiztvlock</a></div>
   <div style="margin-top:6px">参考开源项目：
@@ -243,6 +251,10 @@ function loadStatus() {
       document.getElementById('status').innerHTML = html;
       document.getElementById('netTip').textContent =
         '电视地址 http://' + j.ip + ':' + j.port;
+      if (j.version) {
+        document.getElementById('verLabel').textContent = 'v' + j.version;
+        document.getElementById('buildLabel').textContent = j.versionCode;
+      }
       var s = j.settings || {};
       document.getElementById('watchMinutes').value = s.watchMinutes || 30;
       document.getElementById('minutesPerCorrect').value = s.minutesPerCorrect || 5;

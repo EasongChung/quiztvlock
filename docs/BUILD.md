@@ -20,6 +20,28 @@
 
 **同一 keystore 签出的 APK 指纹一致，可直接覆盖升级安装。**
 
+### 固定签名指纹（校验用）
+
+| 项 | 值 |
+| --- | --- |
+| Subject | `CN=QuizTVLock, O=Home` |
+| 序列号 | `47FDE610BD0FDFB8453CC94C9859E89E` |
+| SHA-256 | `67B4B429C82EC351EDB597794B6EF3A8C6E528B4BD7713349D22014E9B0C3F10` |
+| SHA-1 | `CE44509C3863610B6B5A06A2A91619C7E4563969` |
+| 有效期至 | 2076-11-04 |
+
+安装前可用 `apksigner verify --print-certs app-release.apk` 核对 SHA-256 是否一致。
+
+## 自动版本号与 Release 发布
+
+每次 push 到 `main`（或手动运行 workflow）都会：
+
+1. 取 `github.run_number` 作为 `versionCode`，`versionName` = `1.0.<run_number>`；
+2. 编译时通过 `-PversionCodeOverride` / `-PversionNameOverride` 注入，WebUI 页脚实时显示当前版本；
+3. 用固定 keystore 签名，产物 `quiztvlock-v<版本>.apk`；
+4. 推送到仓库 **Releases**，标签 `v1.0.<run_number>`，并自动附上安装包；
+5. Actions Artifacts 里同时保留一份。
+
 > 想换成自己的证书：本地 `New-SelfSignedCertificate` 或 `keytool` 生成 p12，
 > `base64` 后更新 `QUIZTV_KEYSTORE_BASE64`、修改 `QUIZTV_STORE_PASS` 即可。
 

@@ -443,6 +443,15 @@ public class HttpAdminServer {
                 .put("uninstallBlocked", AdminReceiver.isUninstallBlocked(service)));
         o.put("ip", Util.getIp(service));
         o.put("port", PORT);
+        try {
+            android.content.pm.PackageInfo pi = service.getPackageManager()
+                    .getPackageInfo(service.getPackageName(), 0);
+            o.put("version", pi.versionName);
+            o.put("versionCode", pi.versionCode);
+        } catch (Exception e) {
+            o.put("version", "unknown");
+            o.put("versionCode", 0);
+        }
         return o;
     }
 
